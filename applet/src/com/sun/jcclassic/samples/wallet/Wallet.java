@@ -17,6 +17,10 @@ import javacard.framework.Applet;
 import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
 import javacard.framework.OwnerPIN;
+import javacard.security.AlgorithmParameterSpec;
+import javacard.security.KeyPair;
+import javacard.security.RSAPrivateKey;
+import javacard.security.RSAPublicKey;
 
 public class Wallet extends Applet {
 
@@ -31,7 +35,7 @@ public class Wallet extends Applet {
     final static byte DEBIT = (byte) 0x40;
     final static byte GET_BALANCE = (byte) 0x50;
     final static byte GET_CARDHOLDER_METHODS = (byte) 0x70;
-
+    
     // maximum balance
     final static short MAX_BALANCE = 0x7FFF;
     // maximum transaction amount
@@ -56,6 +60,9 @@ public class Wallet extends Applet {
     final static short SW_EXCEED_MAXIMUM_BALANCE = 0x6A84;
     // signal the the balance becomes negative
     final static short SW_NEGATIVE_BALANCE = 0x6A85;
+    
+    RSAPublicKey publicKey;
+    RSAPrivateKey privateKey;
 
     /* instance variables declaration */
     OwnerPIN pin;
@@ -81,9 +88,15 @@ public class Wallet extends Applet {
         // initialization value
         pin.update(bArray, (short) (bOffset + 1), aLen);
         register();
+        initializeKeys();
 
     } // end of the constructor
-
+    private void initializeKeys() {
+    	KeyPair keyPair = new KeyPair(KeyPair.ALG_RSA, (short)64);
+    	keyPair.genKeyPair();
+    	publicKey = (RSAPublicKey) keyPair.getPublic();
+    	privateKey = (RSAPrivateKey) keyPair.getPrivate();
+    }
     public static void install(byte[] bArray, short bOffset, byte bLength) {
         // create a Wallet applet instance
         new Wallet(bArray, bOffset, bLength);
@@ -274,7 +287,7 @@ public class Wallet extends Applet {
         byte[] buffer = apdu.getBuffer();
         // retrieve the PIN data for validation.
         byte byteRead = (byte) (apdu.setIncomingAndReceive());
-
+       
         // check pin
         // the PIN data is read into the APDU buffer
         // at the offset ISO7816.OFFSET_CDATA
@@ -312,5 +325,14 @@ public class Wallet extends Applet {
         
         apdu.sendBytes((short) 0, bufferLength);
     }
+    
+    public static KeyPair generateKey() throws NoSuchAlgorithmException
+    {
+        KeyPairGenerator keyGen = KeyPairGenerator.getInstance(ALGORITHM);
+        keyGen.initialize(1024);
+        KeyPair key = keyGen.generateKeyPair();
+        return key;
+    }
+    
 } // end of class Wallet
 
