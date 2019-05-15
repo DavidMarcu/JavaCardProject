@@ -18,9 +18,12 @@ import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
 import javacard.framework.OwnerPIN;
 import javacard.security.AlgorithmParameterSpec;
+import javacard.security.CryptoException;
+import javacard.security.KeyBuilder;
 import javacard.security.KeyPair;
 import javacard.security.RSAPrivateKey;
 import javacard.security.RSAPublicKey;
+import javacardx.crypto.Cipher;
 
 public class Wallet extends Applet {
 
@@ -35,6 +38,8 @@ public class Wallet extends Applet {
     final static byte DEBIT = (byte) 0x40;
     final static byte GET_BALANCE = (byte) 0x50;
     final static byte GET_CARDHOLDER_METHODS = (byte) 0x70;
+    final static byte ENCRYPT_PIN = (byte) 0x90;
+    final static byte DECRYPT_PIN = (byte) 0x00;
     
     // maximum balance
     final static short MAX_BALANCE = 0x7FFF;
@@ -61,8 +66,8 @@ public class Wallet extends Applet {
     // signal the the balance becomes negative
     final static short SW_NEGATIVE_BALANCE = 0x6A85;
     
-    RSAPublicKey publicKey;
-    RSAPrivateKey privateKey;
+    private RSAPrivateKey smartcard_rsa_private;
+    private RSAPublicKey smartcard_rsa_public;
 
     /* instance variables declaration */
     OwnerPIN pin;
@@ -70,6 +75,8 @@ public class Wallet extends Applet {
     byte[] xValue = {0x00, 0x00, 0x00, 0x32};
     byte[] yValue = {0x00, 0x00, 0x00, 0x64};
     byte[] cvmRules = {(byte) 0xDF, 0x06, (byte) 0xC1, 0x08, (byte) 0xC4, 0x09};
+    byte[] secret = {0x01, 0x02, 0x03, 0x04, 0x05};
+    byte[] encryptedSecret = new byte[64];
 
     private Wallet(byte[] bArray, short bOffset, byte bLength) {
 
@@ -86,17 +93,74 @@ public class Wallet extends Applet {
 
         // The installation parameters contain the PIN
         // initialization value
-        pin.update(bArray, (short) (bOffset + 1), aLen);
+        pin.update(secret, (short) 0, (byte)secret.length);
         register();
         initializeKeys();
 
     } // end of the constructor
+    
     private void initializeKeys() {
-    	KeyPair keyPair = new KeyPair(KeyPair.ALG_RSA, (short)64);
+    	smartcard_rsa_private = (RSAPrivateKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PRIVATE, KeyBuilder.LENGTH_RSA_512, false);
+    	smartcard_rsa_public =  (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_512, false);
+    	KeyPair keyPair = new KeyPair(smartcard_rsa_public, smartcard_rsa_private);
     	keyPair.genKeyPair();
-    	publicKey = (RSAPublicKey) keyPair.getPublic();
-    	privateKey = (RSAPrivateKey) keyPair.getPrivate();
+    	smartcard_rsa_public = (RSAPublicKey) keyPair.getPublic();
+    	smartcard_rsa_private = (RSAPrivateKey) keyPair.getPrivate();
     }
+    
+    private void encryptPin (APDU apdu) {
+    	 Cipher.OneShot enc = null;
+    	 try {
+    		 short le = apdu.setOutgoing();
+    		 if (le < 2) {
+	            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+    	     }
+    		 apdu.setOutgoingLength((short) 64);
+    		 byte[] outBuffer = apdu.getBuffer();
+    	     enc = Cipher.OneShot.open(Cipher.CIPHER_RSA, Cipher.PAD_PKCS1);
+    	     enc.init(smartcard_rsa_public, Cipher.MODE_ENCRYPT);
+    	     enc.doFinal(secret, (short) 0, (short) secret.length, outBuffer, (short) 0);
+    	     for(byte i = 0; i < 64; i++) {
+    	    	 encryptedSecret[i] = outBuffer[i];
+    	     }
+    	     apdu.sendBytes((short) 0, (short)64);
+    	 } catch (CryptoException ce) {
+    	     // Handle exception
+    	 } finally {
+    	     if (enc != null) {
+    	         enc.close();
+    	         enc = null;
+    	     }
+    	 }
+    }
+    
+    private void decryptPin (APDU apdu) {
+   	 Cipher.OneShot enc = null;
+   	 try {
+   		 short le = apdu.setOutgoing();
+   		 if (le < 2) {
+	            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+   	     }
+   		 apdu.setOutgoingLength((short) 5);
+   		 byte[] outBuffer = apdu.getBuffer();
+   	     enc = Cipher.OneShot.open(Cipher.CIPHER_RSA, Cipher.PAD_PKCS1);
+   	     enc.init(smartcard_rsa_private, Cipher.MODE_DECRYPT);
+   	     enc.doFinal(encryptedSecret, (short) 0, (short) encryptedSecret.length, outBuffer, (short) 0);
+   	     apdu.sendBytes((short) 0, (short)5);
+   	 } catch (CryptoException ce) {
+   	     // Handle exception
+   	 } finally {
+   	     if (enc != null) {
+   	         enc.close();
+   	         enc = null;
+   	     }
+   	 }
+   }
+    
+    private void checkEncryptedPin(APDU apdu) {
+    	//TODO: check here for the decrypted PIN
+    }
+    
     public static void install(byte[] bArray, short bOffset, byte bLength) {
         // create a Wallet applet instance
         new Wallet(bArray, bOffset, bLength);
@@ -169,6 +233,12 @@ public class Wallet extends Applet {
                 return;
             case GET_CARDHOLDER_METHODS:
             	get_cardholder_methods(apdu);
+            	return;
+            case ENCRYPT_PIN:
+            	encryptPin(apdu);
+            	return;
+            case DECRYPT_PIN:
+            	decryptPin(apdu);
             	return;
             default:
                 ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
@@ -325,14 +395,5 @@ public class Wallet extends Applet {
         
         apdu.sendBytes((short) 0, bufferLength);
     }
-    
-    public static KeyPair generateKey() throws NoSuchAlgorithmException
-    {
-        KeyPairGenerator keyGen = KeyPairGenerator.getInstance(ALGORITHM);
-        keyGen.initialize(1024);
-        KeyPair key = keyGen.generateKeyPair();
-        return key;
-    }
-    
 } // end of class Wallet
 
