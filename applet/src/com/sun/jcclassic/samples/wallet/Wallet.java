@@ -39,7 +39,7 @@ public class Wallet extends Applet {
     final static byte GET_BALANCE = (byte) 0x50;
     final static byte GET_CARDHOLDER_METHODS = (byte) 0x70;
     final static byte ENCRYPT_PIN = (byte) 0x90;
-    final static byte DECRYPT_PIN = (byte) 0x00;
+    final static byte CHECK_ENCRYPTED_PIN = (byte) 0x00;
     
     // maximum balance
     final static short MAX_BALANCE = 0x7FFF;
@@ -134,19 +134,14 @@ public class Wallet extends Applet {
     	 }
     }
     
-    private void decryptPin (APDU apdu) {
+    private byte[] decryptPin (byte[] encryptedPin) {
    	 Cipher.OneShot enc = null;
    	 try {
-   		 short le = apdu.setOutgoing();
-   		 if (le < 2) {
-	            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
-   	     }
-   		 apdu.setOutgoingLength((short) 5);
-   		 byte[] outBuffer = apdu.getBuffer();
+   		 byte[] outBuffer = new byte[5];
    	     enc = Cipher.OneShot.open(Cipher.CIPHER_RSA, Cipher.PAD_PKCS1);
    	     enc.init(smartcard_rsa_private, Cipher.MODE_DECRYPT);
    	     enc.doFinal(encryptedSecret, (short) 0, (short) encryptedSecret.length, outBuffer, (short) 0);
-   	     apdu.sendBytes((short) 0, (short)5);
+   	     return outBuffer;
    	 } catch (CryptoException ce) {
    	     // Handle exception
    	 } finally {
@@ -155,10 +150,14 @@ public class Wallet extends Applet {
    	         enc = null;
    	     }
    	 }
+   	 return null;
    }
     
     private void checkEncryptedPin(APDU apdu) {
-    	//TODO: check here for the decrypted PIN
+    	byte[] decryptedPin = decryptPin(encryptedSecret);
+    	if(!pin.check(decryptedPin, (short)0, (byte)decryptedPin.length)){
+    		ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+    	}
     }
     
     public static void install(byte[] bArray, short bOffset, byte bLength) {
@@ -237,8 +236,8 @@ public class Wallet extends Applet {
             case ENCRYPT_PIN:
             	encryptPin(apdu);
             	return;
-            case DECRYPT_PIN:
-            	decryptPin(apdu);
+            case CHECK_ENCRYPTED_PIN:
+            	checkEncryptedPin(apdu);
             	return;
             default:
                 ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);

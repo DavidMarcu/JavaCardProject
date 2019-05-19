@@ -1,5 +1,5 @@
 // converted by version  [v3.1.0]
-// on Wed May 15 19:03:27 EEST 2019
+// on Sun May 19 14:16:29 EEST 2019
 
 .package com/sun/jcclassic/samples/wallet {
 	.aid 0xA0:0x0:0x0:0x0:0x62:0x3:0x1:0xC:0x6;
@@ -95,51 +95,53 @@
 		// 31
 		virtualMethodRef 2.2.8()V;		// close()V
 		// 32
-		.classRef Wallet;
+		staticMethodRef Wallet/decryptPin([B)[B;
 		// 33
-		staticMethodRef Wallet/<init>([BSB)V;
+		virtualMethodRef 0.9.1([BSB)Z;		// check([BSB)Z
 		// 34
-		virtualMethodRef 0.9.2()B;		// getTriesRemaining()B
+		.classRef Wallet;
 		// 35
-		virtualMethodRef 0.9.5()V;		// reset()V
+		staticMethodRef Wallet/<init>([BSB)V;
 		// 36
-		virtualMethodRef 0.10.14()Z;		// isISOInterindustryCLA()Z
+		virtualMethodRef 0.9.2()B;		// getTriesRemaining()B
 		// 37
+		virtualMethodRef 0.9.5()V;		// reset()V
+		// 38
+		virtualMethodRef 0.10.14()Z;		// isISOInterindustryCLA()Z
+		// 39
 		staticMethodRef Wallet/getBalance(Ljavacard/framework/APDU;)V;
 			.descriptor	Ljavacard/framework/APDU;	0.10;
 
-		// 38
+		// 40
 		staticMethodRef Wallet/debit(Ljavacard/framework/APDU;)V;
 			.descriptor	Ljavacard/framework/APDU;	0.10;
 
-		// 39
+		// 41
 		staticMethodRef Wallet/credit(Ljavacard/framework/APDU;)V;
 			.descriptor	Ljavacard/framework/APDU;	0.10;
 
-		// 40
+		// 42
 		staticMethodRef Wallet/verify(Ljavacard/framework/APDU;)V;
 			.descriptor	Ljavacard/framework/APDU;	0.10;
 
-		// 41
+		// 43
 		staticMethodRef Wallet/get_cardholder_methods(Ljavacard/framework/APDU;)V;
 			.descriptor	Ljavacard/framework/APDU;	0.10;
 
-		// 42
+		// 44
 		staticMethodRef Wallet/encryptPin(Ljavacard/framework/APDU;)V;
 			.descriptor	Ljavacard/framework/APDU;	0.10;
 
-		// 43
-		staticMethodRef Wallet/decryptPin(Ljavacard/framework/APDU;)V;
+		// 45
+		staticMethodRef Wallet/checkEncryptedPin(Ljavacard/framework/APDU;)V;
 			.descriptor	Ljavacard/framework/APDU;	0.10;
 
-		// 44
-		virtualMethodRef 0.9.4()Z;		// isValidated()Z
-		// 45
-		virtualMethodRef 0.10.6()S;		// setIncomingAndReceive()S
 		// 46
-		staticMethodRef 0.3.0()V;		// javacard/framework/Applet.<init>()V
+		virtualMethodRef 0.9.4()Z;		// isValidated()Z
 		// 47
-		virtualMethodRef 0.9.1([BSB)Z;		// check([BSB)Z
+		virtualMethodRef 0.10.6()S;		// setIncomingAndReceive()S
+		// 48
+		staticMethodRef 0.3.0()V;		// javacard/framework/Applet.<init>()V
 	}
 
 	.class public Wallet 0 extends 0.3 {		// extends javacard/framework/Applet
@@ -161,7 +163,7 @@
 			static final byte GET_BALANCE = 80;		// B
 			static final byte GET_CARDHOLDER_METHODS = 112;		// B
 			static final byte ENCRYPT_PIN = -112;		// B
-			static final byte DECRYPT_PIN = 0;		// B
+			static final byte CHECK_ENCRYPTED_PIN = 0;		// B
 			static final short MAX_BALANCE = 32767;		// S
 			static final byte MAX_TRANSACTION_AMOUNT = 127;		// B
 			static final byte PIN_TRY_LIMIT = 3;		// B
@@ -192,7 +194,7 @@
 			.locals 3;
 
 				L0:	aload_0;
-					invokespecial 46;		// javacard/framework/Applet.<init>()V
+					invokespecial 48;		// javacard/framework/Applet.<init>()V
 					aload_0;
 					sconst_4;
 					newarray 11;
@@ -441,29 +443,16 @@
 			}
 		}
 
-		.method private decryptPin(Ljavacard/framework/APDU;)V {
+		.method private decryptPin([B)[B {
 			.stack 6;
 			.locals 4;
 
-			.descriptor	Ljavacard/framework/APDU;	0.10;
-
 				L0:	aconst_null;
 					astore_2;
-				L1:	aload_1;
-					invokevirtual 23;		// setOutgoing()S
-					sstore_3;
-				L2:	sload_3;
-					sconst_2;
-					if_scmpge L4;
-				L3:	sspush 26368;
-					invokestatic 24;		// javacard/framework/ISOException.throwIt(S)V
-				L4:	aload_1;
-					sconst_5;
-					invokevirtual 25;		// setOutgoingLength(S)V
-					aload_1;
-					invokevirtual 26;		// getBuffer()[B
-					astore 4;
-				L5:	bspush 7;
+				L1:	sconst_5;
+					newarray 11;
+					astore_3;
+				L2:	bspush 7;
 					bspush 7;
 					invokestatic 27;		// javacardx/crypto/Cipher$OneShot.open(BB)Ljavacardx/crypto/Cipher$OneShot;
 					astore_2;
@@ -476,64 +465,79 @@
 					sconst_0;
 					getfield_a_this 4;		// reference com/sun/jcclassic/samples/wallet/Wallet.encryptedSecret
 					arraylength;
-					aload 4;
+					aload_3;
 					sconst_0;
 					invokevirtual 29;		// doFinal([BSS[BS)S
 					pop;
-					aload_1;
-					sconst_0;
-					sconst_5;
-					invokevirtual 30;		// sendBytes(SS)V
-				L6:	goto L13;
-				L7:	astore_3;
-				L8:	aload_2;
-					ifnull L15;
-				L9:	aload_2;
+					aload_3;
+					astore 5;
+				L3:	aload_2;
+					ifnull L5;
+				L4:	aload_2;
 					invokevirtual 31;		// close()V
 					aconst_null;
 					astore_2;
-					goto L15;
-				L10:	astore 5;
-					aload_2;
+				L5:	aload 5;
+					areturn;
+				L6:	astore_3;
+				L7:	aload_2;
 					ifnull L12;
-				L11:	aload_2;
+				L8:	aload_2;
 					invokevirtual 31;		// close()V
 					aconst_null;
 					astore_2;
-				L12:	aload 5;
+					goto L12;
+				L9:	astore 4;
+					aload_2;
+					ifnull L11;
+				L10:	aload_2;
+					invokevirtual 31;		// close()V
+					aconst_null;
+					astore_2;
+				L11:	aload 4;
 					athrow;
-				L13:	aload_2;
-					ifnull L15;
-				L14:	aload_2;
-					invokevirtual 31;		// close()V
-					aconst_null;
-					astore_2;
-				L15:	return;
+				L12:	aconst_null;
+					areturn;
 			.exceptionTable {
 				// start_block end_block handler_block catch_type_index
-				L1 L6 L7 22;
-				L1 L8 L10 0;
+				L1 L3 L6 22;
+				L1 L3 L9 0;
+				L6 L7 L9 0;
 			}
 		}
 
 		.method private checkEncryptedPin(Ljavacard/framework/APDU;)V {
-			.stack 0;
-			.locals 0;
+			.stack 4;
+			.locals 1;
 
 			.descriptor	Ljavacard/framework/APDU;	0.10;
 
-				L0:	return;
+				L0:	aload_0;
+					getfield_a_this 4;		// reference com/sun/jcclassic/samples/wallet/Wallet.encryptedSecret
+					invokespecial 32;		// com/sun/jcclassic/samples/wallet/Wallet.decryptPin([B)[B
+					astore_2;
+				L1:	getfield_a_this 5;		// reference com/sun/jcclassic/samples/wallet/Wallet.pin
+					aload_2;
+					sconst_0;
+					aload_2;
+					arraylength;
+					s2b;
+					invokevirtual 33;		// check([BSB)Z
+					ifne L3;
+				L2:	sspush 25345;
+					invokestatic 24;		// javacard/framework/ISOException.throwIt(S)V
+				L3:	return;
 		}
 
 		.method public static install([BSB)V 0 {
 			.stack 4;
 			.locals 0;
 
-				L0:	new 32;		// com/sun/jcclassic/samples/wallet/Wallet
+				L0:	new 34;		// com/sun/jcclassic/samples/wallet/Wallet
 					aload_0;
 					sload_1;
 					sload_2;
-					invokespecial 33;		// com/sun/jcclassic/samples/wallet/Wallet.<init>([BSB)V
+					invokespecial 35;		// com/sun/jcclassic/samples/wallet/Wallet.<init>([BSB)V
 					return;
 		}
 
@@ -542,7 +546,7 @@
 			.locals 0;
 
 				L0:	getfield_a_this 5;		// reference com/sun/jcclassic/samples/wallet/Wallet.pin
-					invokevirtual 34;		// getTriesRemaining()B
+					invokevirtual 36;		// getTriesRemaining()B
 					ifne L2;
 				L1:	sconst_0;
 					sreturn;
@@ -555,7 +559,7 @@
 			.locals 0;
 
 				L0:	getfield_a_this 5;		// reference com/sun/jcclassic/samples/wallet/Wallet.pin
-					invokevirtual 35;		// reset()V
+					invokevirtual 37;		// reset()V
 					return;
 		}
 
@@ -569,7 +573,7 @@
 					invokevirtual 26;		// getBuffer()[B
 					astore_2;
 				L1:	aload_1;
-					invokevirtual 36;		// isISOInterindustryCLA()Z
+					invokevirtual 38;		// isISOInterindustryCLA()Z
 					ifeq L5;
 				L2:	aload_2;
 					sconst_1;
@@ -592,31 +596,31 @@
 					slookupswitch L15 7 -112 L13 0 L14 32 L11 48 L10 64 L9 80 L8 112 L12;
 				L8:	aload_0;
 					aload_1;
-					invokespecial 37;		// com/sun/jcclassic/samples/wallet/Wallet.getBalance(Ljavacard/framework/APDU;)V
+					invokespecial 39;		// com/sun/jcclassic/samples/wallet/Wallet.getBalance(Ljavacard/framework/APDU;)V
 					return;
 				L9:	aload_0;
 					aload_1;
-					invokespecial 38;		// com/sun/jcclassic/samples/wallet/Wallet.debit(Ljavacard/framework/APDU;)V
+					invokespecial 40;		// com/sun/jcclassic/samples/wallet/Wallet.debit(Ljavacard/framework/APDU;)V
 					return;
 				L10:	aload_0;
 					aload_1;
-					invokespecial 39;		// com/sun/jcclassic/samples/wallet/Wallet.credit(Ljavacard/framework/APDU;)V
+					invokespecial 41;		// com/sun/jcclassic/samples/wallet/Wallet.credit(Ljavacard/framework/APDU;)V
 					return;
 				L11:	aload_0;
 					aload_1;
-					invokespecial 40;		// com/sun/jcclassic/samples/wallet/Wallet.verify(Ljavacard/framework/APDU;)V
+					invokespecial 42;		// com/sun/jcclassic/samples/wallet/Wallet.verify(Ljavacard/framework/APDU;)V
 					return;
 				L12:	aload_0;
 					aload_1;
-					invokespecial 41;		// com/sun/jcclassic/samples/wallet/Wallet.get_cardholder_methods(Ljavacard/framework/APDU;)V
+					invokespecial 43;		// com/sun/jcclassic/samples/wallet/Wallet.get_cardholder_methods(Ljavacard/framework/APDU;)V
 					return;
 				L13:	aload_0;
 					aload_1;
-					invokespecial 42;		// com/sun/jcclassic/samples/wallet/Wallet.encryptPin(Ljavacard/framework/APDU;)V
+					invokespecial 44;		// com/sun/jcclassic/samples/wallet/Wallet.encryptPin(Ljavacard/framework/APDU;)V
 					return;
 				L14:	aload_0;
 					aload_1;
-					invokespecial 43;		// com/sun/jcclassic/samples/wallet/Wallet.decryptPin(Ljavacard/framework/APDU;)V
+					invokespecial 45;		// com/sun/jcclassic/samples/wallet/Wallet.checkEncryptedPin(Ljavacard/framework/APDU;)V
 					return;
 				L15:	sspush 27904;
 					invokestatic 24;		// javacard/framework/ISOException.throwIt(S)V
@@ -630,7 +634,7 @@
 			.descriptor	Ljavacard/framework/APDU;	0.10;
 
 				L0:	getfield_a_this 5;		// reference com/sun/jcclassic/samples/wallet/Wallet.pin
-					invokevirtual 44;		// isValidated()Z
+					invokevirtual 46;		// isValidated()Z
 					ifne L2;
 				L1:	sspush 25345;
 					invokestatic 24;		// javacard/framework/ISOException.throwIt(S)V
@@ -642,7 +646,7 @@
 					baload;
 					sstore_3;
 				L4:	aload_1;
-					invokevirtual 45;		// setIncomingAndReceive()S
+					invokevirtual 47;		// setIncomingAndReceive()S
 					s2b;
 					sstore 4;
 				L5:	sload_3;
@@ -686,7 +690,7 @@
 			.descriptor	Ljavacard/framework/APDU;	0.10;
 
 				L0:	getfield_a_this 5;		// reference com/sun/jcclassic/samples/wallet/Wallet.pin
-					invokevirtual 44;		// isValidated()Z
+					invokevirtual 46;		// isValidated()Z
 					ifne L2;
 				L1:	sspush 25345;
 					invokestatic 24;		// javacard/framework/ISOException.throwIt(S)V
@@ -698,7 +702,7 @@
 					baload;
 					sstore_3;
 				L4:	aload_1;
-					invokevirtual 45;		// setIncomingAndReceive()S
+					invokevirtual 47;		// setIncomingAndReceive()S
 					s2b;
 					sstore 4;
 				L5:	sload_3;
@@ -785,14 +789,14 @@
 					invokevirtual 26;		// getBuffer()[B
 					astore_2;
 				L1:	aload_1;
-					invokevirtual 45;		// setIncomingAndReceive()S
+					invokevirtual 47;		// setIncomingAndReceive()S
 					s2b;
 					sstore_3;
 				L2:	getfield_a_this 5;		// reference com/sun/jcclassic/samples/wallet/Wallet.pin
 					aload_2;
 					sconst_5;
 					sload_3;
-					invokevirtual 47;		// check([BSB)Z
+					invokevirtual 33;		// check([BSB)Z
 					ifne L4;
 				L3:	sspush 25344;
 					invokestatic 24;		// javacard/framework/ISOException.throwIt(S)V
