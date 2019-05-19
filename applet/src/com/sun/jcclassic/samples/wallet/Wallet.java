@@ -76,7 +76,7 @@ public class Wallet extends Applet {
     byte[] yValue = {0x00, 0x00, 0x00, 0x64};
     byte[] cvmRules = {(byte) 0xDF, 0x06, (byte) 0xC1, 0x08, (byte) 0xC4, 0x09};
     byte[] secret = {0x01, 0x02, 0x03, 0x04, 0x05};
-    byte[] encryptedSecret = new byte[64];
+//    byte[] encryptedSecret = new byte[64];
 
     private Wallet(byte[] bArray, short bOffset, byte bLength) {
 
@@ -93,7 +93,7 @@ public class Wallet extends Applet {
 
         // The installation parameters contain the PIN
         // initialization value
-        pin.update(secret, (short) 0, (byte)secret.length);
+        pin.update(bArray, (short) (bOffset + 1), aLen);
         register();
         initializeKeys();
 
@@ -109,6 +109,20 @@ public class Wallet extends Applet {
     }
     
     private void encryptPin (APDU apdu) {
+    	 byte[] buffer = apdu.getBuffer();
+         byte numBytes = (buffer[ISO7816.OFFSET_LC]);
+         byte byteRead = (byte) (apdu.setIncomingAndReceive());
+         if(numBytes != byteRead) {
+        	 ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+         }
+         byte[] secret = new byte[byteRead];
+         for(short i = 0; i < numBytes; i++) {
+         	secret[i] = buffer[(short)(ISO7816.OFFSET_CDATA + i)];
+         }
+         if(!pin.check(secret, (short) 0, (byte)secret.length)){
+        	 ISOException.throwIt(SW_VERIFICATION_FAILED);
+         }       
+         //till here
     	 Cipher.OneShot enc = null;
     	 try {
     		 short le = apdu.setOutgoing();
@@ -120,9 +134,6 @@ public class Wallet extends Applet {
     	     enc = Cipher.OneShot.open(Cipher.CIPHER_RSA, Cipher.PAD_PKCS1);
     	     enc.init(smartcard_rsa_public, Cipher.MODE_ENCRYPT);
     	     enc.doFinal(secret, (short) 0, (short) secret.length, outBuffer, (short) 0);
-    	     for(byte i = 0; i < 64; i++) {
-    	    	 encryptedSecret[i] = outBuffer[i];
-    	     }
     	     apdu.sendBytes((short) 0, (short)64);
     	 } catch (CryptoException ce) {
     	     // Handle exception
@@ -140,7 +151,7 @@ public class Wallet extends Applet {
    		 byte[] outBuffer = new byte[5];
    	     enc = Cipher.OneShot.open(Cipher.CIPHER_RSA, Cipher.PAD_PKCS1);
    	     enc.init(smartcard_rsa_private, Cipher.MODE_DECRYPT);
-   	     enc.doFinal(encryptedSecret, (short) 0, (short) encryptedSecret.length, outBuffer, (short) 0);
+   	     enc.doFinal(encryptedPin, (short) 0, (short) encryptedPin.length, outBuffer, (short) 0);
    	     return outBuffer;
    	 } catch (CryptoException ce) {
    	     // Handle exception
@@ -154,10 +165,21 @@ public class Wallet extends Applet {
    }
     
     private void checkEncryptedPin(APDU apdu) {
+    	byte[] buffer = apdu.getBuffer();
+        byte numBytes = (buffer[ISO7816.OFFSET_LC]);
+        byte byteRead = (byte) (apdu.setIncomingAndReceive());
+        if(numBytes != 0x40 || byteRead != 0x40) {
+        	ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+        }
+        byte[] encryptedSecret = new byte[64];
+        for(short i = 0; i < numBytes; i++) {
+        	encryptedSecret[i] = buffer[(short)(ISO7816.OFFSET_CDATA + i)];
+        }
     	byte[] decryptedPin = decryptPin(encryptedSecret);
+    	
     	if(!pin.check(decryptedPin, (short)0, (byte)decryptedPin.length)){
-    		ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
-    	}
+    		ISOException.throwIt(SW_VERIFICATION_FAILED);
+    	}        
     }
     
     public static void install(byte[] bArray, short bOffset, byte bLength) {

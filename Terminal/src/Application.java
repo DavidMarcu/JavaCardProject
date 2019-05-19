@@ -17,8 +17,13 @@ import com.sun.javacard.apduio.CadTransportException;
 public class Application {
 
     private CadClientInterface cadClientInterface;
-    private int xValue;
-    private int yValue;
+    private static final byte VERIFY = (byte) 0x20;
+    private static final byte CREDIT = (byte) 0x30;
+    private static final byte DEBIT = (byte) 0x40;
+    private static final byte GET_BALANCE = (byte) 0x50;
+    private static final byte GET_CARDHOLDER_METHODS = (byte) 0x70;
+    private static final byte ENCRYPT_PIN = (byte) 0x90;
+    private static final byte CHECK_ENCRYPTED_PIN = (byte) 0x00;
 
     private void byteArrayHexPrint(String firstLine, byte[] byteArray) {
         System.out.println(firstLine);
@@ -77,8 +82,22 @@ public class Application {
         }
 
         if (output) {
+            String message;
+            switch (apduCommand.command[1]){
+                case GET_CARDHOLDER_METHODS:
+                    message = "Cardholder methods response: ";
+                    break;
+                case ENCRYPT_PIN:
+                    message = "Encrypt pin response: ";
+                    break;
+                case CHECK_ENCRYPTED_PIN:
+                    message = "Check encrypted pin response: ";
+                    break;
+                default:
+                    message = "Apdu response: ";
+            }
             byte[] apduOutput = apduCommand.getResponseApduBytes();
-            byteArrayHexPrint("Apdu response: ", apduOutput);
+            byteArrayHexPrint(message, apduOutput);
         }
     }
 
